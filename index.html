@@ -105,6 +105,7 @@ footer{padding:34px 0;border-top:1px solid #1b2736;color:#8792a3}.footer-in{disp
 <p class="note" data-ar="املأ البيانات، وسيتم فتح واتساب برسالة جاهزة." data-en="Fill in the details and WhatsApp will open with a ready message." data-fr="Remplissez les champs, puis WhatsApp s'ouvrira avec un message prêt à envoyer.">املأ البيانات، وسيتم فتح واتساب برسالة جاهزة.</p>
 <div class="field"><label data-ar="الباقة" data-en="Offer" data-fr="Offre">الباقة</label><input id="orderPlan" readonly=""/></div>
 <div class="field"><label data-ar="المدة" data-en="Duration" data-fr="Durée">المدة</label><select id="orderDuration"><option>3 أشهر</option><option>6 أشهر</option><option>12 شهر</option><option>شهر</option></select></div>
+<div class="field"><label data-ar="السعر" data-en="Price" data-fr="Prix">السعر</label><input id="orderPrice" readonly=""/></div>
 <div class="field"><label data-ar="الاسم" data-en="Name" data-fr="Nom">الاسم</label><input id="orderName" placeholder="اسمك"/></div>
 <div class="field"><label data-ar="ملاحظة" data-en="Note" data-fr="Note">ملاحظة</label><textarea id="orderNote" placeholder="أي تفاصيل إضافية" rows="3"></textarea>
 <div class="field" style="margin-top:12px">
@@ -141,6 +142,20 @@ function setOrderDurationVisibility(plan){
  const field=document.getElementById("orderDuration")?.closest(".field");
  if(field) field.style.display=isNoDurationPlan(plan)?"none":"";
 }
+function getOrderPrice(plan,dur){
+ const card=[...document.querySelectorAll(".plan")].find(x=>x.querySelector("h3")?.textContent.trim().toLowerCase()===String(plan).trim().toLowerCase());
+ if(!card)return "";
+ const prices=[...card.querySelectorAll(".price")];
+ if(!dur){return prices[0]?.querySelector("strong")?.textContent.trim()||""}
+ const item=prices.find(x=>x.querySelector("span")?.textContent.trim()===String(dur).trim());
+ return item?.querySelector("strong")?.textContent.trim()||prices[0]?.querySelector("strong")?.textContent.trim()||"";
+}
+function updateOrderPrice(){
+ const plan=document.getElementById("orderPlan")?.value||"";
+ const dur=document.getElementById("orderDuration")?.value||"";
+ const price=document.getElementById("orderPrice");
+ if(price) price.value=getOrderPrice(plan,dur);
+}
 function openOrder(plan,durations){
  document.getElementById("orderPlan").value=plan;
  setOrderDurationVisibility(plan);
@@ -152,9 +167,10 @@ function openOrder(plan,durations){
    setOrderDurationsFromProduct(plan);
  }
  document.getElementById("orderModal").classList.add("show");
+ updateOrderPrice();
  updatePaymentInstructions();
 }
-function openOrderFromProduct(button){const card=button.closest(".product");const name=card.querySelector("b")?.textContent.trim()||card.dataset.name;document.getElementById("orderPlan").value=name;setOrderDurationVisibility(name);const durations=[...card.querySelectorAll(".price span:first-child")].map(x=>x.textContent.trim());const select=document.getElementById("orderDuration");select.innerHTML="";if(durations.length){durations.forEach(d=>{const o=document.createElement("option");o.textContent=d;select.appendChild(o)})}else{const o=document.createElement("option");o.textContent=currentLang==="ar"?"حسب الاتفاق":"Selon accord";select.appendChild(o)}document.getElementById("orderModal").classList.add("show")}
+function openOrderFromProduct(button){const card=button.closest(".product");const name=card.querySelector("b")?.textContent.trim()||card.dataset.name;document.getElementById("orderPlan").value=name;setOrderDurationVisibility(name);const durations=[...card.querySelectorAll(".price span:first-child")].map(x=>x.textContent.trim());const select=document.getElementById("orderDuration");select.innerHTML="";if(durations.length){durations.forEach(d=>{const o=document.createElement("option");o.textContent=d;select.appendChild(o)})}else{const o=document.createElement("option");o.textContent=currentLang==="ar"?"حسب الاتفاق":"Selon accord";select.appendChild(o)}document.getElementById("orderModal").classList.add("show");updateOrderPrice()}
 function setOrderDurationsFromProduct(plan){const card=[...document.querySelectorAll("#productGrid .product")].find(x=>{const b=x.querySelector("b");return b&&b.textContent.trim().toLowerCase()===plan.trim().toLowerCase()});if(!card)return;const durations=[...card.querySelectorAll(".price span:first-child")].map(x=>x.textContent.trim());const select=document.getElementById("orderDuration");select.innerHTML="";durations.forEach(d=>{const o=document.createElement("option");o.textContent=d;select.appendChild(o)})}
 function closeOrder(){document.getElementById("orderModal").classList.remove("show")}
 
@@ -183,12 +199,13 @@ function updatePaymentInstructions(){
 }
 document.addEventListener("change",e=>{
   if(e.target && e.target.id==="orderPaymentMethod") updatePaymentInstructions();
+  if(e.target && e.target.id==="orderDuration") updateOrderPrice();
 });
 
 function sendOrder(){
- let plan=document.getElementById("orderPlan").value,dur=document.getElementById("orderDuration").value,name=document.getElementById("orderName").value||"-",note=document.getElementById("orderNote").value||"-",payment=document.getElementById("orderPaymentMethod")?.value||"ccp";
+ let plan=document.getElementById("orderPlan").value,dur=document.getElementById("orderDuration").value,price=document.getElementById("orderPrice")?.value||getOrderPrice(plan,dur),name=document.getElementById("orderName").value||"-",note=document.getElementById("orderNote").value||"-",payment=document.getElementById("orderPaymentMethod")?.value||"ccp";
  const noDuration=isNoDurationPlan(plan);
- let msg=currentLang==="ar"?`السلام عليكم، أريد طلب:\nالباقة: ${plan}${noDuration?"":"\nالمدة: "+dur}\nالاسم: ${name}\nطريقة الدفع: ${payment==="ccp"?"CCP":payment==="baridi"?"Baridi Mob":"الدفع عند الاستلام"}\nملاحظة: ${note}`:currentLang==="fr"?`Bonjour, je souhaite commander:\nOffre: ${plan}${noDuration?"":"\nDurée: "+dur}\nNom: ${name}\nMode de paiement: ${payment==="ccp"?"CCP":payment==="baridi"?"Baridi Mob":"Paiement à la livraison"}\nNote: ${note}`:`Hello, I would like to place an order:\nOffer: ${plan}${noDuration?"":"\nDuration: "+dur}\nName: ${name}\nPayment: ${payment==="ccp"?"CCP":payment==="baridi"?"Baridi Mob":"Cash on delivery"}\nNote: ${note}`;
+ let msg=currentLang==="ar"?`السلام عليكم، أريد طلب:\nالباقة: ${plan}${noDuration?"":"\nالمدة: "+dur}\nالسعر: ${price}\nالاسم: ${name}\nطريقة الدفع: ${payment==="ccp"?"CCP":payment==="baridi"?"Baridi Mob":"الدفع عند الاستلام"}\nملاحظة: ${note}`:currentLang==="fr"?`Bonjour, je souhaite commander:\nOffre: ${plan}${noDuration?"":"\nDurée: "+dur}\nPrix: ${price}\nNom: ${name}\nMode de paiement: ${payment==="ccp"?"CCP":payment==="baridi"?"Baridi Mob":"Paiement à la livraison"}\nNote: ${note}`:`Hello, I would like to place an order:\nOffer: ${plan}${noDuration?"":"\nDuration: "+dur}\nPrice: ${price}\nName: ${name}\nPayment: ${payment==="ccp"?"CCP":payment==="baridi"?"Baridi Mob":"Cash on delivery"}\nNote: ${note}`;
  window.open("https://wa.me/213797951989?text="+encodeURIComponent(msg),"_blank");
 }
 window.addEventListener("click",e=>{if(e.target.id==="orderModal")closeOrder()});
