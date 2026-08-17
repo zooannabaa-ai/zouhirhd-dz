@@ -143,11 +143,16 @@ function setOrderDurationVisibility(plan){
  if(field) field.style.display=isNoDurationPlan(plan)?"none":"";
 }
 function getOrderPrice(plan,dur){
- const card=[...document.querySelectorAll(".plan")].find(x=>x.querySelector("h3")?.textContent.trim().toLowerCase()===String(plan).trim().toLowerCase());
+ const wanted=String(plan).trim().toLowerCase();
+ const card=[...document.querySelectorAll(".plan, #productGrid .product")].find(x=>{
+   const title=x.querySelector("h3, b");
+   return title?.textContent.trim().toLowerCase()===wanted;
+ });
  if(!card)return "";
  const prices=[...card.querySelectorAll(".price")];
  if(!dur){return prices[0]?.querySelector("strong")?.textContent.trim()||""}
- const item=prices.find(x=>x.querySelector("span")?.textContent.trim()===String(dur).trim());
+ const wantedDur=String(dur).trim().toLowerCase();
+ const item=prices.find(x=>x.querySelector("span")?.textContent.trim().toLowerCase()===wantedDur);
  return item?.querySelector("strong")?.textContent.trim()||prices[0]?.querySelector("strong")?.textContent.trim()||"";
 }
 function updateOrderPrice(){
