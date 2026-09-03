@@ -118,137 +118,6 @@ footer{padding:34px 0;border-top:1px solid #1b2736;color:#8792a3}.footer-in{disp
   }
 </style>
 
-
-<style>
-/* Professional payment selector */
-.payment-choice-wrap{
-  margin-top:14px;
-}
-.payment-choice-title{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  margin-bottom:10px;
-  font-weight:800;
-  color:#172033;
-}
-.payment-choice-subtitle{
-  font-size:12px;
-  font-weight:600;
-  color:#6b7280;
-  margin-top:3px;
-}
-.payment-choice-grid{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:10px;
-}
-.payment-choice-card{
-  position:relative;
-  min-height:82px;
-  padding:13px 11px;
-  border:1.5px solid #e5e7eb;
-  border-radius:14px;
-  background:#fff;
-  cursor:pointer;
-  transition:all .18s ease;
-  box-shadow:0 2px 8px rgba(15,23,42,.04);
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  text-align:center;
-  user-select:none;
-}
-.payment-choice-card:hover{
-  transform:translateY(-1px);
-  border-color:#b8c0cc;
-  box-shadow:0 5px 14px rgba(15,23,42,.08);
-}
-.payment-choice-card.selected{
-  border-color:#111827;
-  background:#f8fafc;
-  box-shadow:0 0 0 2px rgba(17,24,39,.08),0 6px 16px rgba(15,23,42,.09);
-}
-.payment-choice-card .payment-icon{
-  font-size:25px;
-  line-height:1;
-  margin-bottom:7px;
-}
-.payment-choice-card .payment-name{
-  font-size:13px;
-  font-weight:800;
-  color:#111827;
-  line-height:1.25;
-}
-.payment-choice-card .payment-check{
-  position:absolute;
-  top:7px;
-  right:7px;
-  width:19px;
-  height:19px;
-  border-radius:50%;
-  display:none;
-  align-items:center;
-  justify-content:center;
-  background:#111827;
-  color:#fff;
-  font-size:12px;
-  font-weight:900;
-}
-.payment-choice-card.selected .payment-check{
-  display:flex;
-}
-.payment-choice-warning{
-  display:flex;
-  align-items:center;
-  gap:7px;
-  margin-top:9px;
-  padding:9px 11px;
-  border-radius:10px;
-  background:#fff8e6;
-  border:1px solid #f3dfaa;
-  color:#725515;
-  font-size:12px;
-  font-weight:700;
-}
-.payment-choice-note{
-  margin-top:9px;
-  font-size:12px;
-  color:#6b7280;
-  text-align:center;
-}
-@media(max-width:600px){
-  .payment-choice-grid{
-    grid-template-columns:repeat(2,minmax(0,1fr));
-  }
-  .payment-choice-card{
-    min-height:78px;
-  }
-}
-@media(max-width:380px){
-  .payment-choice-grid{
-    grid-template-columns:1fr;
-  }
-}
-</style>
-
-
-<style>
-#orderPaymentMethod{
-  position:absolute !important;
-  width:1px !important;
-  height:1px !important;
-  padding:0 !important;
-  margin:-1px !important;
-  overflow:hidden !important;
-  clip:rect(0,0,0,0) !important;
-  white-space:nowrap !important;
-  border:0 !important;
-}
-</style>
-
 </head>
 <body>
 <header><div class="container nav">
@@ -733,56 +602,132 @@ function normalizeDownloader(v){return String(v||"").toLowerCase().normalize("NF
 function renderDownloader(q=""){const box=document.getElementById("downloaderResults"),count=document.getElementById("downloaderCount");if(!box)return;const query=normalizeDownloader(q);const matches=query?downloaderCodes.filter(x=>normalizeDownloader(x.name).includes(query)):[];if(!query){box.innerHTML='<div class="downloader-empty">اكتب اسم التطبيق للبحث عن الكود.</div>';count.textContent="";return}if(!matches.length){box.innerHTML='<div class="downloader-empty">لم يتم العثور على التطبيق. تأكد من الاسم وحاول مرة أخرى.</div>';count.textContent="";return}count.textContent=`تم العثور على ${matches.length} نتيجة`;box.innerHTML=matches.map(x=>`<div class="downloader-result"><b>${x.name}</b><span class="downloader-code">${x.code}</span></div>`).join("")}
 const downloaderSearch=document.getElementById("downloaderSearch");if(downloaderSearch){downloaderSearch.addEventListener("input",e=>renderDownloader(e.target.value));}
 
-// بعد العودة من Slick-Pay: نتحقق من حالة الفاتورة قبل فتح WhatsApp.
-(function handleSlickPayReturn(){
-  const params = new URLSearchParams(window.location.search);
-  if(params.get("slickpay_return") !== "1") return;
+// بعد العودة من Slick-Pay: لا نفتح WhatsApp إلا بعد التحقق من حالة الفاتورة.
+// SlickPay يوضح أن حالة الفاتورة يجب التحقق منها عبر GET قبل اعتبار الدفع ناجحًا.
+async function verifySlickPayInvoice(invoiceId){
+  if(!invoiceId) return {ok:false,status:null,error:"missing_invoice_id"};
+  const url=SLICKPAY_STATUS_API_BASE+"/users/invoices/"+encodeURIComponent(invoiceId);
+  try{
+    const response=await fetch(url,{
+      method:"GET",
+      headers:{
+        "Accept":"application/json",
+        "Authorization":"Bearer "+SLICKPAY_PUBLIC_KEY
+      },
+      cache:"no-store"
+    });
+    const text=await response.text();
+    let data={};
+    try{data=text?JSON.parse(text):{};}catch(_){data={raw:text};}
+    if(!response.ok) return {ok:false,status:null,httpStatus:response.status,data};
 
-  const tag = params.get("tag") || "";
-  const saved = localStorage.getItem("pending_slickpay_order");
+    let d=data?.data ?? data;
+    // Some responses may expose data as a JSON string.
+    if(typeof d === "string"){
+      try{d=JSON.parse(d);}catch(_){}
+    }
+    const paymentStatus=String(
+      d?.payment_status ??
+      d?.status ??
+      data?.payment_status ??
+      ""
+    ).toLowerCase().trim();
+
+    return {ok:paymentStatus==="paid",status:paymentStatus,data};
+  }catch(error){
+    console.error("Slick-Pay status verification error",error);
+    return {ok:false,status:null,error:error?.message||String(error)};
+  }
+}
+
+function showSlickPayReturnMessage(type){
+  let box=document.getElementById("slickpayReturnMessage");
+  if(!box){
+    box=document.createElement("div");
+    box.id="slickpayReturnMessage";
+    box.style.cssText="position:fixed;inset:0;z-index:100000;background:rgba(7,12,22,.82);display:flex;align-items:center;justify-content:center;padding:20px;font-family:Arial,sans-serif;direction:rtl;";
+    document.body.appendChild(box);
+  }
+  const content = type==="checking"
+    ? `<div style="background:#fff;border-radius:18px;padding:26px 22px;max-width:430px;width:100%;text-align:center;box-shadow:0 15px 45px rgba(0,0,0,.25)"><div style="font-size:40px">⏳</div><h3 style="margin:10px 0;color:#111827">جاري التحقق من الدفع</h3><p style="margin:0;color:#6b7280;line-height:1.7">يرجى الانتظار لحظات، نتحقق من حالة العملية قبل إرسال الطلب عبر WhatsApp.</p></div>`
+    : type==="paid"
+      ? `<div style="background:#fff;border-radius:18px;padding:26px 22px;max-width:430px;width:100%;text-align:center;box-shadow:0 15px 45px rgba(0,0,0,.25)"><div style="font-size:44px">✅</div><h3 style="margin:10px 0;color:#111827">تم تأكيد الدفع</h3><p style="margin:0;color:#6b7280;line-height:1.7">سيتم فتح WhatsApp لإرسال تفاصيل طلبك.</p></div>`
+      : `<div style="background:#fff;border-radius:18px;padding:26px 22px;max-width:430px;width:100%;text-align:center;box-shadow:0 15px 45px rgba(0,0,0,.25)"><div style="font-size:44px">⚠️</div><h3 style="margin:10px 0;color:#b42318">لم يتم تأكيد الدفع</h3><p style="margin:0;color:#6b7280;line-height:1.7">لم يتم تأكيد عملية الدفع من Slick-Pay. لن يتم إرسال رسالة تفيد بنجاح الدفع.</p><button onclick="document.getElementById('slickpayReturnMessage')?.remove();window.history.replaceState({},document.title,window.location.pathname);" style="margin-top:18px;border:0;border-radius:12px;padding:12px 22px;background:#111827;color:#fff;font-weight:700;cursor:pointer">العودة للموقع</button></div>`;
+  box.innerHTML=content;
+}
+
+(async function handleSlickPayReturn(){
+  const params=new URLSearchParams(window.location.search);
+  if(params.get("slickpay_return")!=="1") return;
+
+  const tag=params.get("tag")||"";
+  const saved=localStorage.getItem("pending_slickpay_order");
   if(!saved){
     console.error("Slick-Pay return: pending order not found");
+    showSlickPayReturnMessage("failed");
     return;
   }
 
   let order;
-  try{
-    order = JSON.parse(saved);
-  }catch(e){
-    console.error("Slick-Pay return: invalid pending order", e);
+  try{order=JSON.parse(saved);}catch(e){
+    console.error("Slick-Pay return: invalid pending order",e);
+    showSlickPayReturnMessage("failed");
     return;
   }
 
-  // Slick-Pay has already completed the hosted payment before sending the
-  // customer to the return URL. Do not block the WhatsApp redirect on a
-  // browser-side API status request (which can be blocked by CORS).
-  if(tag && order.tag && order.tag !== tag){
-    console.error("Slick-Pay return: tag mismatch", {savedTag: order.tag, returnedTag: tag});
+  if(tag && order.tag && order.tag!==tag){
+    console.error("Slick-Pay return: tag mismatch",{savedTag:order.tag,returnedTag:tag});
+    showSlickPayReturnMessage("failed");
     return;
   }
 
-  const sentKey = "slickpay_whatsapp_sent_" + (order.invoice_id || tag || "return");
-  if(sessionStorage.getItem(sentKey) === "1") return;
+  if(!order.invoice_id){
+    console.error("Slick-Pay return: invoice id missing",order);
+    showSlickPayReturnMessage("failed");
+    return;
+  }
 
-  const msg = currentLang==="ar"
+  const sentKey="slickpay_whatsapp_sent_"+order.invoice_id;
+  if(sessionStorage.getItem(sentKey)==="1") return;
+
+  showSlickPayReturnMessage("checking");
+
+  // Give SATIM/SlickPay a short time to finalize the status, then verify again.
+  let result={ok:false};
+  for(let attempt=1;attempt<=4;attempt++){
+    result=await verifySlickPayInvoice(order.invoice_id);
+    if(result.ok) break;
+    if(result.status==="unpaid" && attempt<4){
+      await new Promise(r=>setTimeout(r,2000));
+      continue;
+    }
+    if(result.status===null && attempt<4){
+      await new Promise(r=>setTimeout(r,1500));
+      continue;
+    }
+    break;
+  }
+
+  if(!result.ok){
+    console.warn("Slick-Pay payment not confirmed",{invoice_id:order.invoice_id,status:result.status,error:result.error});
+    showSlickPayReturnMessage("failed");
+    // Keep pending order so a later retry can verify it again.
+    return;
+  }
+
+  const msg=currentLang==="ar"
     ? `السلام عليكم، تم الدفع بنجاح عبر الذهبية/CIB ✅\nالباقة: ${order.product}\nالمدة: ${order.duration}\nالسعر: ${order.amount} دج\nالاسم: ${order.customer_name}\nملاحظة: ${order.note}`
     : currentLang==="fr"
       ? `Bonjour, paiement réussi via Or/CIB ✅\nOffre: ${order.product}\nDurée: ${order.duration}\nPrix: ${order.amount} DA\nNom: ${order.customer_name}\nNote: ${order.note}`
       : `Hello, payment successful via Gold/CIB ✅\nOffer: ${order.product}\nDuration: ${order.duration}\nPrice: ${order.amount} DZD\nName: ${order.customer_name}\nNote: ${order.note}`;
 
-  sessionStorage.setItem(sentKey, "1");
+  sessionStorage.setItem(sentKey,"1");
   localStorage.removeItem("pending_slickpay_order");
+  showSlickPayReturnMessage("paid");
 
-  // Return to the website first, let it load, then open WhatsApp after 3 seconds.
-  // The direct wa.me URL is used so mobile devices can hand off to the WhatsApp app.
   setTimeout(function(){
-    const whatsappUrl =
-      "https://wa.me/213797951989?text=" + encodeURIComponent(msg);
-
-    // Keep the redirect in the same tab so the customer is taken directly
-    // from the Slick-Pay return page to WhatsApp.
-    window.location.href = whatsappUrl;
-  }, 3000);
+    window.location.href="https://wa.me/213797951989?text="+encodeURIComponent(msg);
+  },1200);
 })();
 
 applyLang();
@@ -850,14 +795,5 @@ document.addEventListener("DOMContentLoaded",updateSiteViews);
 </script>
 
 
-
-
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-  updatePaymentChoices();
-  const p = document.getElementById('orderPaymentMethod');
-  if(p) p.addEventListener('change', updatePaymentChoices);
-});
-</script>
 
 </body></html>
