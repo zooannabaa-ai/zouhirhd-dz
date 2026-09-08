@@ -104,6 +104,19 @@ footer{padding:34px 0;border-top:1px solid #1b2736;color:#8792a3}.footer-in{disp
   }
 </style>
 
+
+<style id="facebook-fixed-icon">
+  .facebook-fixed-icon{
+    position:fixed;right:18px;bottom:66px;width:48px;height:48px;
+    display:flex;align-items:center;justify-content:center;
+    background:#1877F2;border-radius:50%;z-index:100000;
+    box-shadow:0 4px 14px rgba(0,0,0,.3);
+    transition:transform .2s ease,box-shadow .2s ease;
+  }
+  .facebook-fixed-icon:hover{transform:scale(1.08);box-shadow:0 6px 18px rgba(0,0,0,.4)}
+  .facebook-fixed-icon svg{width:28px;height:28px;fill:#fff}
+  @media(max-width:560px){.facebook-fixed-icon{right:14px;bottom:62px;width:46px;height:46px}}
+</style>
 </head>
 <body>
 <header><div class="container nav">
@@ -794,5 +807,11 @@ document.addEventListener("DOMContentLoaded",updateSiteViews);
 </script>
 
 
+
+
+<!-- Facebook fixed icon -->
+<a class="facebook-fixed-icon" href="https://www.facebook.com/profile.php?id=61564795995529" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 21v-8h2.7l.4-3h-3.1V8.1c0-.87.24-1.46 1.5-1.46h1.7V3.96c-.29-.04-1.28-.13-2.43-.13-2.41 0-4.06 1.47-4.06 4.17V10H7.5v3h2.71v8h3.29Z"/></svg>
+</a>
 
 </body></html>
