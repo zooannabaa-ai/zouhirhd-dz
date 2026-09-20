@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080d16"><title>تفاصيل المنتج | zouhirhd DZ</title>
+<style>
+:root{--bg:#070b12;--gold:#f6c933;--text:#f7f7f7;--muted:#aeb7c5;--line:#263447}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:radial-gradient(circle at 50% -10%,#172338 0,#070b12 48%);color:var(--text);font-family:Arial,"Noto Sans Arabic",sans-serif}a{color:inherit;text-decoration:none}.container{width:min(980px,92%);margin:auto}
+header{position:sticky;top:0;z-index:10;background:rgba(7,11,18,.88);backdrop-filter:blur(14px);border-bottom:1px solid #1b2736}.nav{height:70px;display:flex;align-items:center;justify-content:space-between;gap:15px}.logo{font-weight:900;font-size:23px}.logo span{color:var(--gold)}
+.btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid #344256;background:#111a27;color:#fff;border-radius:12px;padding:11px 16px;cursor:pointer;font-weight:800}.btn.gold{background:linear-gradient(135deg,#f5c72f,#e6a900);color:#111;border-color:#ffd65d}.btn.whatsapp{background:#109b61;border-color:#22d68b}
+main{padding:35px 0 55px}.product-page{background:linear-gradient(180deg,#111b29,#0b121c);border:1px solid var(--line);border-radius:24px;padding:26px;box-shadow:0 25px 70px rgba(0,0,0,.3)}.product-head{display:grid;grid-template-columns:280px 1fr;gap:30px;align-items:center}.product-image{width:100%;max-width:280px;height:280px;object-fit:contain;border-radius:20px;background:#000;padding:10px;display:block;margin:auto}.product-name{font-size:clamp(30px,5vw,48px);margin:0 0 10px}.product-sub{color:var(--muted);line-height:1.8;margin:0 0 22px}.prices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:20px 0}.price-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 14px;border:1px solid #344256;border-radius:13px;background:#0d1520}.price-item span{color:#d6dce5}.price-item strong{background:var(--gold);color:#111;border-radius:8px;padding:7px 9px;white-space:nowrap}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}.back{color:#dce3eb}.loading,.error{text-align:center;padding:70px 20px;color:var(--muted)}.error h2{color:#fff}
+@media(max-width:700px){.nav{height:64px}.product-page{padding:18px;border-radius:18px}.product-head{grid-template-columns:1fr;gap:18px;text-align:center}.product-image{width:190px;height:190px}.prices{grid-template-columns:1fr}.actions{justify-content:center}}
+</style></head>
+<body>
+<header><div class="container nav"><a class="logo" href="index.html"><span>zouhirhd</span> DZ</a><a class="btn back" href="index.html#products">← العودة للمنتجات</a></div></header>
+<main class="container"><section class="product-page" id="productPage"><div class="loading">جاري تحميل تفاصيل المنتج...</div></section></main>
+<script>
+(function(){
+ const box=document.getElementById("productPage"), params=new URLSearchParams(location.search), requested=(params.get("product")||"").trim().toLowerCase();
+ function esc(v){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
+ if(!requested){box.innerHTML='<div class="error"><h2>المنتج غير محدد</h2><a class="btn gold" href="index.html#products">العودة للمتجر</a></div>';return}
+ fetch("index.html",{cache:"no-store"}).then(r=>{if(!r.ok)throw 0;return r.text()}).then(html=>{
+  const doc=new DOMParser().parseFromString(html,"text/html"), cards=[...doc.querySelectorAll("#productGrid .product")];
+  const card=cards.find(c=>(c.querySelector("b")?.textContent.trim()||c.dataset.name||"").toLowerCase()===requested); if(!card)throw 0;
+  const name=card.querySelector("b")?.textContent.trim()||card.dataset.name||"", img=card.querySelector("img")?.getAttribute("src")||"";
+  const prices=[...card.querySelectorAll(".price")].map(x=>({duration:x.querySelector("span")?.textContent.trim()||"",price:x.querySelector("strong")?.textContent.trim()||""})).filter(x=>x.duration||x.price);
+  document.title=name+" | zouhirhd DZ";
+  box.innerHTML=`<div class="product-head"><div>${img?`<img class="product-image" alt="${esc(name)}" src="${img}">`:""}</div><div><h1 class="product-name">${esc(name)}</h1><p class="product-sub">تفاصيل المنتج والأسعار المتوفرة. اختر العرض المناسب لك ثم اضغط على طلب الآن لإكمال الطلب.</p><div class="prices">${prices.length?prices.map(x=>`<div class="price-item"><span>${esc(x.duration)}</span><strong>${esc(x.price)}</strong></div>`).join(""):'<div class="price-item"><span>السعر</span><strong>حسب الاتفاق</strong></div>'}</div><div class="actions"><a class="btn gold" href="index.html#products">← العودة للمنتجات</a><button class="btn whatsapp" id="orderBtn">اطلب الآن</button></div></div></div>`;
+  document.getElementById("orderBtn").addEventListener("click",()=>{location.href="index.html?orderProduct="+encodeURIComponent(name)});
+ }).catch(()=>{box.innerHTML='<div class="error"><h2>تعذر تحميل المنتج</h2><p>يرجى العودة إلى المتجر والمحاولة مرة أخرى.</p><a class="btn gold" href="index.html#products">العودة للمتجر</a></div>'});
+})();
+</script></body></html>
